@@ -4,11 +4,15 @@ import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -32,6 +36,7 @@ import com.google.firebase.ktx.Firebase
 import com.ltdd.a7_noteapp.R
 import com.ltdd.a7_noteapp.databinding.ActivityMainBinding
 import com.ltdd.a7_noteapp.databinding.AddNotesBinding
+import com.ltdd.a7_noteapp.databinding.EditNoteBinding
 import com.ltdd.a7_noteapp.model.Post
 import java.util.Random
 
@@ -43,7 +48,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var database: FirebaseDatabase
     private lateinit var myRef: DatabaseReference
     private lateinit var firestore: FirebaseFirestore
-    lateinit var dialog: AlertDialog
+    lateinit var addDialog: AlertDialog
+    lateinit var editDialog: AlertDialog
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,7 +70,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         binding.btnAdd.setOnClickListener {
-            showDialog()
+            showAddDialog()
         }
     }
 
@@ -101,6 +107,25 @@ class MainActivity : AppCompatActivity() {
                 holder.txtTitle.text = model.title
                 holder.txtContent.text = model.content
                 holder.layoutNote.setBackgroundColor(android.graphics.Color.parseColor(model.color))
+
+                var btnMore: ImageButton = holder.itemView.findViewById(R.id.btn_more)
+
+                btnMore.setOnClickListener {
+                    val popupMenu = PopupMenu(it.context, it)
+                    popupMenu.gravity = Gravity.END
+                    popupMenu.menu.add("Edit").setOnMenuItemClickListener { menuItem ->
+                        // Xử lý khi click vào menu Edit
+                        editPost(getRef(position).key!!, model)
+                        true
+                    }
+                    popupMenu.menu.add("Delete").setOnMenuItemClickListener { menuItem ->
+                        // Xử lý khi click vào menu Delete
+                        deletePost(getRef(position).key!!)
+                        true
+                    }
+                    popupMenu.show()
+                }
+
             }
 
             override fun onDataChanged() {
@@ -123,12 +148,67 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showDialog() {
+    private fun deletePost(postId: String) {
+        // Hiển thị hộp thoại xác nhận xóa bài đăng
+        AlertDialog.Builder(this)
+            .setTitle("Confirm Delete")
+            .setMessage("Are you sure you want to delete this post?")
+            .setPositiveButton("Delete") { dialog, which ->
+                // Xóa bài đăng từ cơ sở dữ liệu Firebase Realtime Database
+                myRef.child(postId).removeValue()
+                Toast.makeText(this, "Post deleted successfully!", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun editPost(postId: String, post: Post) {
+        val editBuild = AlertDialog.Builder(this, R.style.ThemeCustom)
+        val editDialogBinding = EditNoteBinding.inflate(LayoutInflater.from(this))
+        editBuild.setView(editDialogBinding.root)
+
+        editDialogBinding.txtEditTitle.setText(post.title)
+        editDialogBinding.txtEditContent.setText(post.content)
+
+        editDialogBinding.btnSave.setOnClickListener {
+            val newTitle = editDialogBinding.txtEditTitle.text.toString()
+            val newContent = editDialogBinding.txtEditContent.text.toString()
+
+            if (newTitle.isNotEmpty() && newContent.isNotEmpty()) {
+                updatePost(postId, newTitle, newContent)
+                editDialog.dismiss()
+            } else {
+                Toast.makeText(this, "Please enter title and content", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        editDialogBinding.btnOut.setOnClickListener {
+            editDialog.dismiss()
+        }
+
+        editDialog = editBuild.create()
+        editDialog.show()
+    }
+
+
+    private fun updatePost(postId: String, newTitle: String, newContent: String) {
+        myRef.child(postId).child("title").setValue(newTitle)
+        myRef.child(postId).child("content").setValue(newContent)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Toast.makeText(this, "Post updated successfully!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Failed to update post", Toast.LENGTH_SHORT).show()
+                }
+            }
+    }
+
+    private fun showAddDialog() {
         val build = AlertDialog.Builder(this, R.style.ThemeCustom)
         val dialogBinding = AddNotesBinding.inflate(LayoutInflater.from(this))
         build.setView(dialogBinding.root)
         dialogBinding.btnExit.setOnClickListener {
-            dialog.dismiss()
+            addDialog.dismiss()
         }
         dialogBinding.btnSubmit.setOnClickListener {
             val title = dialogBinding.txtAddTitle.text.toString()
@@ -144,10 +224,10 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            dialog.dismiss()
+            addDialog.dismiss()
         }
-        dialog = build.create()
-        dialog.show()
+        addDialog = build.create()
+        addDialog.show()
     }
 
     fun gotRandomColor(): String {
