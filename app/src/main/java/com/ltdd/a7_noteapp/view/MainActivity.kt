@@ -1,9 +1,12 @@
 package com.ltdd.a7_noteapp.view
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
@@ -65,31 +68,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showDialog() {
-        val build = AlertDialog.Builder(this, R.style.ThemeCustom)
-        val dialogBinding = AddNotesBinding.inflate(LayoutInflater.from(this))
-        build.setView(dialogBinding.root)
-        dialogBinding.btnExit.setOnClickListener {
-            dialog.dismiss()
-        }
-        dialogBinding.btnSubmit.setOnClickListener {
-            val title = dialogBinding.txtAddTitle.text.toString()
-            val content = dialogBinding.txtAddContent.text.toString()
-            val id = myRef.push().key
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.logout_menu, menu)
+        return true
+    }
 
-            if (id != null) {
-                myRef.child(id).setValue(Post(id, title, content, gotRandomColor())).addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        Toast.makeText(this, "Add note successful!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this, "Add note unsuccessful!", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-            dialog.dismiss()
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.mnuSearch){
+            auth.signOut()
+            val intent = Intent(this, LoginActivity::class.java)
+            startActivity(intent)
         }
-        dialog = build.create()
-        dialog.show()
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onStart() {
@@ -131,6 +121,33 @@ class MainActivity : AppCompatActivity() {
             txtContent = view.findViewById(R.id.txt_content)
             layoutNote = view.findViewById(R.id.layoutNote)
         }
+    }
+
+    private fun showDialog() {
+        val build = AlertDialog.Builder(this, R.style.ThemeCustom)
+        val dialogBinding = AddNotesBinding.inflate(LayoutInflater.from(this))
+        build.setView(dialogBinding.root)
+        dialogBinding.btnExit.setOnClickListener {
+            dialog.dismiss()
+        }
+        dialogBinding.btnSubmit.setOnClickListener {
+            val title = dialogBinding.txtAddTitle.text.toString()
+            val content = dialogBinding.txtAddContent.text.toString()
+            val id = myRef.push().key
+
+            if (id != null) {
+                myRef.child(id).setValue(Post(id, title, content, gotRandomColor())).addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Toast.makeText(this, "Add note successful!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "Add note unsuccessful!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            dialog.dismiss()
+        }
+        dialog = build.create()
+        dialog.show()
     }
 
     fun gotRandomColor(): String {
