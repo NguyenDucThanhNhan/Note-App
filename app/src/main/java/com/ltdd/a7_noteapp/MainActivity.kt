@@ -3,6 +3,15 @@ package com.ltdd.a7_noteapp
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.firebase.ui.database.FirebaseRecyclerAdapter
+import com.firebase.ui.database.FirebaseRecyclerOptions
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.database.DataSnapshot
@@ -15,10 +24,12 @@ import com.google.firebase.database.ktx.database
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.ltdd.a7_noteapp.databinding.ActivityMainBinding
 import com.ltdd.a7_noteapp.model.Post
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityMainBinding
     private lateinit var auth: FirebaseAuth
     private lateinit var database: FirebaseDatabase
     private lateinit var myRef: DatabaseReference
@@ -26,7 +37,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
+        setContentView(binding.root)
 
         auth = Firebase.auth
 
@@ -34,21 +46,71 @@ class MainActivity : AppCompatActivity() {
         myRef = database.getReference("message")
         firestore = Firebase.firestore
 
-//        login("lalashikeda@gmail.com", "123456")
-//        createNewUser("hehe@gmail.com", "123456")
-//        postDataToRealTimeDB("Hello!")
-//        readDataFromRealTimeDB()
-//        postDataToFireStore()
-        addPostData(Post("Hello", "World!"))
-        addPostData(Post("Hello", "Nhan!"))
-        addPostData(Post("Hello", "Hehe!"))
-        addPostData(Post("Hello", "Haha!"))
+        binding.rvNotes.layoutManager = GridLayoutManager(
+            this,
+            2,
+            RecyclerView.VERTICAL,
+            false
+        )
+
+        addNotes()
+    }
+
+    fun addNotes(){
+        val id = myRef.push().key
+        val title = "Test Title"
+        val content = "Test content"
+
+        if (id != null) {
+            myRef.child(id).setValue(Post(id, title, content)).addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d("DEBUG", "post data successful")
+                } else {
+                    Log.d("DEBUG", "post data unsuccessful")
+                }
+            }
+        }
+
     }
 
     override fun onStart() {
         super.onStart()
-        var currentUser = auth.getCurrentUser()
+
+        val options = FirebaseRecyclerOptions.Builder<Post>()
+            .setQuery(myRef,Post::class.java)
+            .setLifecycleOwner(this)
+            .build()
+
+        val adapter = object : FirebaseRecyclerAdapter<Post, PostHolder>(options) {
+            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostHolder {
+                return PostHolder(
+                    LayoutInflater.from(parent.context)
+                    .inflate(R.layout.note_items, parent, false))
+            }
+
+            protected override fun onBindViewHolder(holder: PostHolder, position: Int, model: Post) {
+                holder.txtTitle.text = model.title
+                holder.txtContent.text = model.content
+            }
+
+            override fun onDataChanged() {
+            }
+        }
+
+        binding.rvNotes.adapter = adapter
+        adapter.startListening()
     }
+
+    class PostHolder(view: View) : RecyclerView.ViewHolder(view) {
+        var txtTitle: TextView
+        var txtContent: TextView
+
+        init {
+            txtTitle = view.findViewById(R.id.txt_title)
+            txtContent = view.findViewById(R.id.txt_content)
+        }
+    }
+
 
     fun login(email: String, password: String){
         auth.signInWithEmailAndPassword(email, password)
