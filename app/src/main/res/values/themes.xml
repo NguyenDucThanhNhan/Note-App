@@ -6,4 +6,11 @@
     </style>
 
     <style name="Theme._7_NoteApp" parent="Base.Theme._7_NoteApp" />
+    //Tao bo goc transparent va dieu chinh kich thuoc thong bao
+    <style name="ThemeCustom" parent="Theme.AppCompat.Light.Dialog">
+        //Bo goc
+        <item name="android:windowBackground">@android:color/transparent</item>
+        //Kich thuoc
+        <item name="windowMinWidthMinor">80%</item>
+    </style>
 </resources>

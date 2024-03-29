@@ -7,6 +7,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -27,6 +29,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.ltdd.a7_noteapp.databinding.ActivityMainBinding
+import com.ltdd.a7_noteapp.databinding.AddNotesBinding
 import com.ltdd.a7_noteapp.model.Post
 import java.util.Random
 
@@ -38,6 +41,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var database: FirebaseDatabase
     private lateinit var myRef: DatabaseReference
     private lateinit var firestore: FirebaseFirestore
+    lateinit var dialog: AlertDialog
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,25 +62,35 @@ class MainActivity : AppCompatActivity() {
         )
 
         binding.btnAdd.setOnClickListener {
-            addNotes()
+            showDialog()
         }
     }
 
-    fun addNotes(){
-        val id = myRef.push().key
-        val title = "Test Title"
-        val content = "Test content"
+    private fun showDialog() {
+        val build = AlertDialog.Builder(this, R.style.ThemeCustom)
+        val dialogBinding = AddNotesBinding.inflate(LayoutInflater.from(this))
+        build.setView(dialogBinding.root)
+        dialogBinding.btnExit.setOnClickListener {
+            dialog.dismiss()
+        }
+        dialogBinding.btnSubmit.setOnClickListener {
+            val title = dialogBinding.txtAddTitle.text.toString()
+            val content = dialogBinding.txtAddContent.text.toString()
+            val id = myRef.push().key
 
-        if (id != null) {
-            myRef.child(id).setValue(Post(id, title, content, gotRandomColor())).addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    Log.d("DEBUG", "post data successful")
-                } else {
-                    Log.d("DEBUG", "post data unsuccessful")
+            if (id != null) {
+                myRef.child(id).setValue(Post(id, title, content, gotRandomColor())).addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Toast.makeText(this, "Add note successful!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "Add note unsuccessful!", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
+            dialog.dismiss()
         }
-
+        dialog = build.create()
+        dialog.show()
     }
 
     override fun onStart() {
